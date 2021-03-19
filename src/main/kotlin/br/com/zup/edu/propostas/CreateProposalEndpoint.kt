@@ -5,7 +5,6 @@ import br.com.zup.edu.CreateProposalResponse
 import br.com.zup.edu.PropostasGrpcServiceGrpc
 import com.google.protobuf.Timestamp
 import io.grpc.stub.StreamObserver
-import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import java.math.BigDecimal
 import java.time.LocalDateTime
@@ -13,13 +12,15 @@ import java.time.ZoneId
 import java.util.*
 import javax.inject.Inject
 import javax.inject.Singleton
+import javax.transaction.Transactional
 
 @Singleton
-class CreateProposalEndpoint(@Inject val repository: ProposalRespository) : PropostasGrpcServiceGrpc.PropostasGrpcServiceImplBase() {
+open class CreateProposalEndpoint(@Inject val repository: ProposalRespository) : PropostasGrpcServiceGrpc.PropostasGrpcServiceImplBase() {
 
     private val LOGGER = LoggerFactory.getLogger(this.javaClass)
 
-    override fun create(request: CreateProposalRequest, responseObserver: StreamObserver<CreateProposalResponse>) {
+    @Transactional
+    open override fun create(request: CreateProposalRequest, responseObserver: StreamObserver<CreateProposalResponse>) {
 
         LOGGER.info("New Request: $request")
 
