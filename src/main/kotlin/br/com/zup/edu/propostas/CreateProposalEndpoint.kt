@@ -3,12 +3,9 @@ package br.com.zup.edu.propostas
 import br.com.zup.edu.CreateProposalRequest
 import br.com.zup.edu.CreateProposalResponse
 import br.com.zup.edu.PropostasGrpcServiceGrpc
-import com.google.protobuf.Any
+import br.com.zup.edu.shared.grpc.ErrorHandler
 import com.google.protobuf.Timestamp
-import com.google.rpc.BadRequest
-import com.google.rpc.Code
 import io.grpc.Status
-import io.grpc.protobuf.StatusProto
 import io.grpc.stub.StreamObserver
 import org.slf4j.LoggerFactory
 import java.math.BigDecimal
@@ -17,8 +14,8 @@ import java.time.ZoneId
 import javax.inject.Inject
 import javax.inject.Singleton
 import javax.transaction.Transactional
-import javax.validation.ConstraintViolationException
 
+@ErrorHandler
 @Singleton
 open class CreateProposalEndpoint(@Inject val repository: ProposalRespository) : PropostasGrpcServiceGrpc.PropostasGrpcServiceImplBase() {
 
@@ -36,43 +33,13 @@ open class CreateProposalEndpoint(@Inject val repository: ProposalRespository) :
             return // it's important to stop the flow
         }
 
-        val proposal = try {
-            repository.save(request.toModel())
-        } catch (e: ConstraintViolationException) {
-            handleConstraintValidationException(e, responseObserver)
-            return // it's important to stop the flow
-        }
+        val proposal = repository.save(request.toModel())
 
         responseObserver.onNext(CreateProposalResponse.newBuilder()
                                         .setId(proposal.id.toString())
                                         .setCreatedAt(proposal.createdAt.toGrpcTimestamp())
                                         .build())
         responseObserver.onCompleted()
-    }
-
-    private fun handleConstraintValidationException(
-        e: ConstraintViolationException,
-        responseObserver: StreamObserver<CreateProposalResponse>,
-    ) {
-        LOGGER.error(e.message)
-
-        val badRequest = BadRequest.newBuilder() // com.google.rpc.BadRequest
-            .addAllFieldViolations(e.constraintViolations.map {
-                BadRequest.FieldViolation.newBuilder()
-                    .setField(it.propertyPath.last().name) // propertyPath=save.entity.email
-                    .setDescription(it.message)
-                    .build()
-            }
-            ).build()
-
-        val statusProto = com.google.rpc.Status.newBuilder()
-            .setCode(Code.INVALID_ARGUMENT_VALUE)
-            .setMessage("request with invalid parameters")
-            .addDetails(Any.pack(badRequest)) // com.google.protobuf.Any
-            .build()
-
-        LOGGER.info("$statusProto")
-        responseObserver.onError(StatusProto.toStatusRuntimeException(statusProto)) // io.grpc.protobuf.StatusProto
     }
 
 }
