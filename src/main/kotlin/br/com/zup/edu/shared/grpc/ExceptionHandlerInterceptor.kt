@@ -1,6 +1,5 @@
-package br.com.zup.edu.shared.validations.grpc
+package br.com.zup.edu.shared.grpc
 
-import br.com.zup.edu.propostas.CreateProposalEndpoint
 import br.com.zup.edu.propostas.ProposalAlreadyExistsException
 import com.google.rpc.BadRequest
 import com.google.rpc.Code

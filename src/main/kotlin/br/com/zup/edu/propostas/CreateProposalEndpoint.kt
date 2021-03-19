@@ -3,7 +3,7 @@ package br.com.zup.edu.propostas
 import br.com.zup.edu.CreateProposalRequest
 import br.com.zup.edu.CreateProposalResponse
 import br.com.zup.edu.PropostasGrpcServiceGrpc
-import br.com.zup.edu.shared.validations.grpc.ErrorHandler
+import br.com.zup.edu.shared.grpc.ErrorHandler
 import com.google.protobuf.Timestamp
 import io.grpc.stub.StreamObserver
 import org.slf4j.LoggerFactory

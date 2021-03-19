@@ -1,4 +1,4 @@
-package br.com.zup.edu.shared.validations.grpc
+package br.com.zup.edu.shared.grpc
 
 import io.micronaut.aop.Around
 import kotlin.annotation.AnnotationRetention.*
