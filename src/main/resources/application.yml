@@ -1,6 +1,7 @@
 micronaut:
   application:
     name: propostasGrpc
+
 datasources:
   default:
     url: jdbc:h2:mem:devDb;MVCC=TRUE;LOCK_TIMEOUT=10000;DB_CLOSE_ON_EXIT=FALSE
@@ -9,4 +10,7 @@ datasources:
     password: ''
     schema-generate: CREATE_DROP
     dialect: H2
+
 jpa.default.properties.hibernate.hbm2ddl.auto: update
+jpa.default.properties.hibernate.show_sql: true
+jpa.default.properties.hibernate.format_sql: true
