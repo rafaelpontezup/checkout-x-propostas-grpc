@@ -1,20 +1,24 @@
 syntax = "proto3";
 
 option java_multiple_files = true;
-option java_package = "br.com.zup.edu";
 option java_outer_classname = "PropostasGrpc";
-option objc_class_prefix = "HLW";
 
 package br.com.zup.edu;
+import "google/protobuf/timestamp.proto";
 
 service PropostasGrpcService {
-  rpc send (PropostasGrpcRequest) returns (PropostasGrpcReply) {}
+  rpc create(CreateProposalRequest) returns (CreateProposalResponse) {}
 }
 
-message PropostasGrpcRequest {
-  string name = 1;
+message CreateProposalRequest {
+  string document = 1;
+  string email    = 2;
+  string name     = 3;
+  string address  = 4;
+  double salary   = 5; // TODO: string seems better here due to precision
 }
 
-message PropostasGrpcReply {
-  string message = 1;
+message CreateProposalResponse {
+  string id = 1;
+  google.protobuf.Timestamp createdAt = 2;
 }
