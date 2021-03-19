@@ -7,6 +7,7 @@ import com.google.protobuf.Any
 import com.google.protobuf.Timestamp
 import com.google.rpc.BadRequest
 import com.google.rpc.Code
+import io.grpc.Status
 import io.grpc.protobuf.StatusProto
 import io.grpc.stub.StreamObserver
 import org.slf4j.LoggerFactory
@@ -27,6 +28,13 @@ open class CreateProposalEndpoint(@Inject val repository: ProposalRespository) :
     open override fun create(request: CreateProposalRequest, responseObserver: StreamObserver<CreateProposalResponse>) {
 
         LOGGER.info("New Request: $request")
+
+        if (repository.existsByDocument(request.document)) {
+            responseObserver.onError(Status.ALREADY_EXISTS
+                                .withDescription("proposal already exists")
+                                .asRuntimeException())
+            return // it's important to stop the flow
+        }
 
         val proposal = try {
             repository.save(request.toModel())
@@ -51,7 +59,7 @@ open class CreateProposalEndpoint(@Inject val repository: ProposalRespository) :
 
             LOGGER.info("$statusProto")
             responseObserver.onError(StatusProto.toStatusRuntimeException(statusProto)) // io.grpc.protobuf.StatusProto
-            return // XXX: it's important to stop the flow
+            return // it's important to stop the flow
         }
 
         responseObserver.onNext(CreateProposalResponse.newBuilder()
