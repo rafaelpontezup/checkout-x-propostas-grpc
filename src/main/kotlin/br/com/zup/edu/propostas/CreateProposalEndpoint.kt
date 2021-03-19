@@ -46,8 +46,8 @@ open class CreateProposalEndpoint(@Inject val repository: ProposalRespository) :
         }
 
         responseObserver.onNext(CreateProposalResponse.newBuilder()
-                                        .setId(UUID.randomUUID().toString())
-                                        .setCreatedAt(LocalDateTime.now().let {
+                                        .setId(proposal.id.toString())
+                                        .setCreatedAt(proposal.createdAt.let {
                                             val createdAt = it.atZone(ZoneId.of("UTC")).toInstant()
                                             Timestamp.newBuilder()
                                                 .setSeconds(createdAt.epochSecond)
