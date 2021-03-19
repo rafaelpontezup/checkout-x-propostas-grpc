@@ -10,7 +10,6 @@ import org.slf4j.LoggerFactory
 import java.math.BigDecimal
 import java.time.LocalDateTime
 import java.time.ZoneId
-import java.util.*
 import javax.inject.Inject
 import javax.inject.Singleton
 import javax.transaction.Transactional
@@ -26,9 +25,8 @@ open class CreateProposalEndpoint(@Inject val repository: ProposalRespository) :
 
         LOGGER.info("New Request: $request")
 
-        val proposal = request.toModel()
-        try {
-            repository.save(proposal)
+        val proposal = try {
+            repository.save(request.toModel())
         } catch (e: ConstraintViolationException) {
             LOGGER.error(e.message)
             responseObserver.onError(Status.INVALID_ARGUMENT
