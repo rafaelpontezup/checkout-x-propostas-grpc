@@ -3,8 +3,11 @@ package br.com.zup.edu.propostas
 import br.com.zup.edu.CreateProposalRequest
 import br.com.zup.edu.CreateProposalResponse
 import br.com.zup.edu.PropostasGrpcServiceGrpc
+import com.google.protobuf.Any
 import com.google.protobuf.Timestamp
-import io.grpc.Status
+import com.google.rpc.BadRequest
+import com.google.rpc.Code
+import io.grpc.protobuf.StatusProto
 import io.grpc.stub.StreamObserver
 import org.slf4j.LoggerFactory
 import java.math.BigDecimal
@@ -28,11 +31,26 @@ open class CreateProposalEndpoint(@Inject val repository: ProposalRespository) :
         val proposal = try {
             repository.save(request.toModel())
         } catch (e: ConstraintViolationException) {
+
             LOGGER.error(e.message)
-            responseObserver.onError(Status.INVALID_ARGUMENT
-                            .withDescription("request with invalid parameters")
-                            .withCause(e) // it's NOT sent to the client
-                            .asRuntimeException())
+
+            val badRequest = BadRequest.newBuilder() // com.google.rpc.BadRequest
+                .addAllFieldViolations(e.constraintViolations.map {
+                    BadRequest.FieldViolation.newBuilder()
+                        .setField(it.propertyPath.last().name) // propertyPath=save.entity.email
+                        .setDescription(it.message)
+                        .build()
+                }
+            ).build()
+
+            val statusProto = com.google.rpc.Status.newBuilder()
+                .setCode(Code.INVALID_ARGUMENT_VALUE)
+                .setMessage("request with invalid parameters")
+                .addDetails(Any.pack(badRequest)) // com.google.protobuf.Any
+                .build()
+
+            LOGGER.info("$statusProto")
+            responseObserver.onError(StatusProto.toStatusRuntimeException(statusProto)) // io.grpc.protobuf.StatusProto
             return // XXX: it's important to stop the flow
         }
 
