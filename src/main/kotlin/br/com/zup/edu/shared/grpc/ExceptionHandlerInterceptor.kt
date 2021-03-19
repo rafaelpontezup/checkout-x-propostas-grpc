@@ -27,6 +27,14 @@ class ExceptionHandlerInterceptor : MethodInterceptor<CreateProposalEndpoint, An
         } catch (e: Exception) {
             LOGGER.error(e.message)
 
+            /**
+             * That's a simple solution and in my opinion it's good enough for a microservice.
+             *
+             * But if you want a better or reusable solution you can use OO and polymorphism to make it
+             * more flexible as you can see here:
+             *
+             * - https://gist.github.com/rponte/8f23557d7e3079c9e644e620df293420#file-a01_exceptionhandlerinterceptor-kt-L26
+             */
             val statusError = when (e) {
                 is IllegalArgumentException -> Status.INVALID_ARGUMENT.withDescription(e.message).asRuntimeException()
                 is IllegalStateException -> Status.FAILED_PRECONDITION.withDescription(e.message).asRuntimeException()
