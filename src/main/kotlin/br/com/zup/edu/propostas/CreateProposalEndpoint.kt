@@ -26,14 +26,7 @@ open class CreateProposalEndpoint(@Inject val repository: ProposalRespository) :
 
         LOGGER.info("New Request: $request")
 
-        val proposal = Proposal(
-            document = request.document,
-            email = request.email,
-            name = request.name,
-            address = request.address,
-            salary = BigDecimal(request.salary)
-        )
-
+        val proposal = request.toModel()
         try {
             repository.save(proposal)
         } catch (e: ConstraintViolationException) {
@@ -47,14 +40,31 @@ open class CreateProposalEndpoint(@Inject val repository: ProposalRespository) :
 
         responseObserver.onNext(CreateProposalResponse.newBuilder()
                                         .setId(proposal.id.toString())
-                                        .setCreatedAt(proposal.createdAt.let {
-                                            val createdAt = it.atZone(ZoneId.of("UTC")).toInstant()
-                                            Timestamp.newBuilder()
-                                                .setSeconds(createdAt.epochSecond)
-                                                .setNanos(createdAt.nano)
-                                                .build()
-                                        }).build())
+                                        .setCreatedAt(proposal.createdAt.toGrpcTimestamp())
+                                        .build())
         responseObserver.onCompleted()
     }
 
+}
+
+/**
+ * Extension methods
+ */
+
+fun CreateProposalRequest.toModel(): Proposal {
+    return Proposal(
+        document = document,
+        email = email,
+        name = name,
+        address = address,
+        salary = BigDecimal(salary)
+    )
+}
+
+fun LocalDateTime.toGrpcTimestamp(): Timestamp {
+    val instant = this.atZone(ZoneId.of("UTC")).toInstant()
+    return Timestamp.newBuilder()
+                    .setSeconds(instant.epochSecond)
+                    .setNanos(instant.nano)
+                    .build()
 }
