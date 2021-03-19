@@ -7,19 +7,31 @@ import com.google.protobuf.Timestamp
 import io.grpc.stub.StreamObserver
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
+import java.math.BigDecimal
 import java.time.LocalDateTime
 import java.time.ZoneId
 import java.util.*
+import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
-class CreateProposalEndpoint : PropostasGrpcServiceGrpc.PropostasGrpcServiceImplBase() {
+class CreateProposalEndpoint(@Inject val repository: ProposalRespository) : PropostasGrpcServiceGrpc.PropostasGrpcServiceImplBase() {
 
     private val LOGGER = LoggerFactory.getLogger(this.javaClass)
 
     override fun create(request: CreateProposalRequest, responseObserver: StreamObserver<CreateProposalResponse>) {
 
         LOGGER.info("New Request: $request")
+
+        val proposal = Proposal(
+            document = request.document,
+            email = request.email,
+            name = request.name,
+            address = request.address,
+            salary = BigDecimal(request.salary)
+        )
+
+        repository.save(proposal)
 
         responseObserver.onNext(CreateProposalResponse.newBuilder()
                                         .setId(UUID.randomUUID().toString())
