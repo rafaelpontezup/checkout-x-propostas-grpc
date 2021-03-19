@@ -11,6 +11,7 @@ import javax.persistence.Id
 import javax.validation.constraints.Email
 import javax.validation.constraints.NotBlank
 import javax.validation.constraints.NotNull
+import javax.validation.constraints.PositiveOrZero
 
 @Entity
 class Proposal(
@@ -32,6 +33,7 @@ class Proposal(
     @Column(nullable = false)
     val address: String,
 
+    @field:PositiveOrZero
     @field:NotNull
     @Column(nullable = false)
     val salary: BigDecimal

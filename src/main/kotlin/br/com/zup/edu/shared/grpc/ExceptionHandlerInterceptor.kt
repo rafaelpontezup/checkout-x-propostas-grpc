@@ -17,7 +17,7 @@ import javax.validation.ConstraintViolationException
 
 @Singleton
 @InterceptorBean(ErrorHandler::class) // supported from Micronaut 2.4 onwards (https://docs.micronaut.io/2.4.0/guide/index.html#aop)
-class ExceptionHandlerInterceptor : MethodInterceptor<CreateProposalEndpoint, Any?> {
+class ExceptionHandlerInterceptor : MethodInterceptor<CreateProposalEndpoint, Any?> { // or BindableService
 
     private val LOGGER = LoggerFactory.getLogger(this.javaClass)
 
