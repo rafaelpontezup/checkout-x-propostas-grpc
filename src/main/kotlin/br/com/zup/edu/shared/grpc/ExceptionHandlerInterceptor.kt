@@ -1,7 +1,7 @@
 package br.com.zup.edu.shared.grpc
 
-import br.com.zup.edu.CreateProposalResponse
 import br.com.zup.edu.propostas.CreateProposalEndpoint
+import br.com.zup.edu.propostas.ProposalAlreadyExistsException
 import com.google.rpc.BadRequest
 import com.google.rpc.Code
 import io.grpc.Status
@@ -11,8 +11,6 @@ import io.grpc.stub.StreamObserver
 import io.micronaut.aop.MethodInterceptor
 import io.micronaut.aop.MethodInvocationContext
 import org.slf4j.LoggerFactory
-import java.lang.IllegalArgumentException
-import java.lang.IllegalStateException
 import javax.inject.Singleton
 import javax.validation.ConstraintViolationException
 
@@ -26,11 +24,12 @@ class ExceptionHandlerInterceptor : MethodInterceptor<CreateProposalEndpoint, An
             return context.proceed()
         } catch (e: Exception) {
             LOGGER.error(e.message)
-            
+
             val statusError = when (e) {
                 is IllegalArgumentException -> Status.INVALID_ARGUMENT.withDescription(e.message).asRuntimeException()
                 is IllegalStateException -> Status.FAILED_PRECONDITION.withDescription(e.message).asRuntimeException()
                 is ConstraintViolationException -> handleConstraintValidationException(e)
+                is ProposalAlreadyExistsException -> Status.ALREADY_EXISTS.withDescription(e.message).asRuntimeException()
                 else -> Status.UNKNOWN.withDescription("unexpected error happened").asRuntimeException()
             }
 

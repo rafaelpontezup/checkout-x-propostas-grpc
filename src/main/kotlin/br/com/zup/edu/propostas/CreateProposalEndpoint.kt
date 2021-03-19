@@ -5,7 +5,6 @@ import br.com.zup.edu.CreateProposalResponse
 import br.com.zup.edu.PropostasGrpcServiceGrpc
 import br.com.zup.edu.shared.grpc.ErrorHandler
 import com.google.protobuf.Timestamp
-import io.grpc.Status
 import io.grpc.stub.StreamObserver
 import org.slf4j.LoggerFactory
 import java.math.BigDecimal
@@ -27,10 +26,7 @@ open class CreateProposalEndpoint(@Inject val repository: ProposalRespository) :
         LOGGER.info("New Request: $request")
 
         if (repository.existsByDocument(request.document)) {
-            responseObserver.onError(Status.ALREADY_EXISTS
-                                .withDescription("proposal already exists")
-                                .asRuntimeException())
-            return // it's important to stop the flow
+            throw ProposalAlreadyExistsException("proposal already exists")
         }
 
         val proposal = repository.save(request.toModel())
