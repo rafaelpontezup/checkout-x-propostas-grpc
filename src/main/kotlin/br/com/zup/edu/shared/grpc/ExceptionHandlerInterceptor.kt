@@ -8,6 +8,7 @@ import io.grpc.Status
 import io.grpc.StatusRuntimeException
 import io.grpc.protobuf.StatusProto
 import io.grpc.stub.StreamObserver
+import io.micronaut.aop.InterceptorBean
 import io.micronaut.aop.MethodInterceptor
 import io.micronaut.aop.MethodInvocationContext
 import org.slf4j.LoggerFactory
@@ -15,6 +16,7 @@ import javax.inject.Singleton
 import javax.validation.ConstraintViolationException
 
 @Singleton
+@InterceptorBean(ErrorHandler::class) // supported from Micronaut 2.4 onwards (https://docs.micronaut.io/2.4.0/guide/index.html#aop)
 class ExceptionHandlerInterceptor : MethodInterceptor<CreateProposalEndpoint, Any?> {
 
     private val LOGGER = LoggerFactory.getLogger(this.javaClass)
