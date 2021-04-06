@@ -41,6 +41,11 @@ dependencies {
     runtimeOnly("com.h2database:h2")
 
     implementation("org.hibernate:hibernate-validator:6.1.6.Final")
+
+    /**
+     * Testing dependencies
+     */
+    testImplementation("org.hamcrest:hamcrest-core:2.2")
 }
 
 
