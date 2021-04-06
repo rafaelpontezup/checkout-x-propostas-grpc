@@ -12,16 +12,14 @@ import java.time.LocalDateTime
 import java.time.ZoneId
 import javax.inject.Inject
 import javax.inject.Singleton
-import javax.transaction.Transactional
 
 @ErrorHandler
 @Singleton
-open class CreateProposalEndpoint(@Inject val repository: ProposalRespository) : PropostasGrpcServiceGrpc.PropostasGrpcServiceImplBase() {
+class CreateProposalEndpoint(@Inject val repository: ProposalRespository) : PropostasGrpcServiceGrpc.PropostasGrpcServiceImplBase() {
 
     private val LOGGER = LoggerFactory.getLogger(this.javaClass)
 
-    @Transactional
-    open override fun create(request: CreateProposalRequest, responseObserver: StreamObserver<CreateProposalResponse>) {
+    override fun create(request: CreateProposalRequest, responseObserver: StreamObserver<CreateProposalResponse>) {
 
         LOGGER.info("New Request: $request")
 
