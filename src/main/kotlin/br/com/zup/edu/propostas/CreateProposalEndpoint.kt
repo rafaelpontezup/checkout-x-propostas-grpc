@@ -6,8 +6,10 @@ import br.com.zup.edu.PropostasGrpcServiceGrpc
 import br.com.zup.edu.shared.grpc.ErrorHandler
 import com.google.protobuf.Timestamp
 import io.grpc.stub.StreamObserver
+import io.micronaut.transaction.SynchronousTransactionManager
 import org.slf4j.LoggerFactory
 import java.math.BigDecimal
+import java.sql.Connection
 import java.time.LocalDateTime
 import java.time.ZoneId
 import javax.inject.Inject
@@ -15,7 +17,10 @@ import javax.inject.Singleton
 
 @ErrorHandler
 @Singleton
-class CreateProposalEndpoint(@Inject val repository: ProposalRespository) : PropostasGrpcServiceGrpc.PropostasGrpcServiceImplBase() {
+class CreateProposalEndpoint(
+    @Inject val repository: ProposalRespository,
+    @Inject val transactionManager: SynchronousTransactionManager<Connection>,
+) : PropostasGrpcServiceGrpc.PropostasGrpcServiceImplBase() {
 
     private val LOGGER = LoggerFactory.getLogger(this.javaClass)
 
@@ -23,11 +28,15 @@ class CreateProposalEndpoint(@Inject val repository: ProposalRespository) : Prop
 
         LOGGER.info("New Request: $request")
 
-        if (repository.existsByDocument(request.document)) {
-            throw ProposalAlreadyExistsException("proposal already exists")
-        }
+        // favoreça controle transacional programático
+        val proposal = transactionManager.executeWrite {
 
-        val proposal = repository.save(request.toModel())
+            if (repository.existsByDocument(request.document)) {
+                throw ProposalAlreadyExistsException("proposal already exists")
+            }
+
+            repository.save(request.toModel())
+        }
 
         responseObserver.onNext(CreateProposalResponse.newBuilder()
                                         .setId(proposal.id.toString())
