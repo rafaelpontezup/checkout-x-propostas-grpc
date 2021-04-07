@@ -93,7 +93,7 @@ internal class CreateProposalEndpointTest(
         with(thrown) {
             assertEquals(Status.INVALID_ARGUMENT.code, status.code)
             assertEquals("request with invalid parameters", status.description)
-            assertThat(violationsFrom(this), containsInAnyOrder(
+            assertThat(violations(), containsInAnyOrder(
                 Pair("name", "must not be blank"),
                 Pair("document", "must not be blank"),
                 Pair("document", "document is not a valid CPF or CNPJ"),
@@ -112,12 +112,8 @@ internal class CreateProposalEndpointTest(
         }
     }
 
-    /**
-     * This method may be extracted to a new class: StatusRuntimeExceptionUtils
-     */
-    fun violationsFrom(exception: StatusRuntimeException): List<Pair<String, String>>? {
-
-        val details = StatusProto.fromThrowable(exception)
+    fun StatusRuntimeException.violations(): List<Pair<String, String>>? {
+        val details = StatusProto.fromThrowable(this)
             ?.detailsList?.get(0)!!
             .unpack(BadRequest::class.java)
 
