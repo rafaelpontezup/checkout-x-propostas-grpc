@@ -2,6 +2,9 @@ package br.com.zup.edu.propostas
 
 import br.com.zup.edu.CreateProposalRequest
 import br.com.zup.edu.PropostasGrpcServiceGrpc
+import br.com.zup.edu.propostas.integration.FinancialClient
+import br.com.zup.edu.propostas.integration.SubmitForAnalysisRequest
+import br.com.zup.edu.propostas.integration.SubmitForAnalysisResponse
 import com.google.rpc.BadRequest
 import io.grpc.ManagedChannel
 import io.grpc.Status
@@ -11,6 +14,7 @@ import io.micronaut.context.annotation.Bean
 import io.micronaut.context.annotation.Factory
 import io.micronaut.grpc.annotation.GrpcChannel
 import io.micronaut.grpc.server.GrpcServerChannel
+import io.micronaut.test.annotation.MockBean
 import io.micronaut.test.extensions.junit5.annotation.MicronautTest
 import org.hamcrest.MatcherAssert.assertThat
 import org.hamcrest.Matchers.containsInAnyOrder
@@ -18,11 +22,14 @@ import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
+import org.mockito.Mockito
+import org.mockito.Mockito.*
 import java.math.BigDecimal
 import java.util.*
+import javax.inject.Inject
 
 /**
- * ROTEIRO do Checkout Estendido:
+ * ROTEIRO do Checkout Estendido: testes com micronaut
  *
  * 1. contextualização: apresentação da aplicação
  *  1.1. explica e navega pelo codigo
@@ -50,6 +57,59 @@ import java.util.*
  *  8.3. melhorando com Extension Functions: StatusRuntimeException.violations()
  * 9. evitando repetição de código com @BeforeEach
  * 10. duvidas?
+ *
+ * ROTEIRO do Checkout Estendido: mocking com micronaut
+ *
+ * 1. contextualiza projeto
+ * 2. abre atividade e explica: https://github.com/zup-academy/nosso-cartao-documentacao/blob/master/proposta/015.consultando_dados_solicitante.md
+ * 3. implementa a feature da forma mais simples
+ *  3.1. a cada alteração roda bateria de testes
+ *  3.2. adiciona nova coluna ProposalStatus e roda os testes e vê passar
+ *  3.3. adiciona assert para validar status ELIGIBLE
+ *  3.4. implementa integração com FinancialClient (mais simples possivel, pra possibilitar refactoring futuro)
+ *  3.5. cria request e response como class em vez de data class
+ *  3.6. roda bateria de testes e vê quebrar (motivo: tenta acessar servidor real)
+ * 4. mocking
+ *  4.0. explica a motivação de mockar (aqui os alunos já conhecem o Mockito)
+ *  4.1. implementa mock diretamente no método
+ *  4.2. roda bateria de testes e vê quebrar (motivo: nao mockamos no contexto do micronaut)
+ *  4.3. explica que mockamos o client dentro do método mas não no contexto do micronaut
+ *  4.4. introduz ao @MockBean
+ *  4.5. roda os testes e vê quebrar (motivo: equals and hashCode)
+ * 5. equals and hashCode
+ *  5.0. analogia do dublê (pula da frente de um gol mas veio um palio); faz exemplo com string e depois com objeto;
+ *  5.1. gera equals e hashCode para todos os atributos
+ *  5.2. roda os testes e vê quebrar (motivo: proposalId eh um UUID)
+ *  5.3. gera equals e hashCode para atributos document e name
+ *  5.4. roda os testes e vê passar
+ * 6. novo cenário de testes
+ *  6.1. melhora nome do teste happy-path para "deve criar nova proposta com status ELEGIVEL"
+ *  6.2. implementa teste "deve criar nova proposta com status NAO ELEGIVEL"
+ * 7. refatora código
+ *  7.1. move logica pra dentro do response: val status = response.toModel()
+ *  7.2. roda os testes e vê passar
+ *  7.3. (opcional) melhora logica pra retornar NOT_ELIGIBLE se status for diferente de "SEM_RESTRICAO"
+ *  7.4. roda os testes e vê passar
+ * 8. refatoração: que tal usar data classes?
+ *  8.1. explica que eh uma boa prática
+ *  8.2. basta mudar pra data class, né? (lembra de remover equals e hashCode)
+ *  8.3. roda os testes e vê quebrar
+ *  8.4. explica como data class funciona
+ *  8.5. sugere usar mas ter com cuidado com atributos gerados (como UUID, LocalDateTime etc)
+ *  8.6. refatora
+ *  8.7. roda os testes e vê passar
+ * 9. (opcional) sugestão de melhorias?
+ *  9.1. explica problema do proposalId ser UUID gerado pelo Hibernate
+ *  9.2. explica que precisamos ter controle dessa geração
+ *  9.3. cria ProposalIdGenerator como @Singleton
+ *  9.4. desliga @GeneratedValue do Hibernate e gera via ProposalIdGenerator no request.toModel(generator)
+ *  9.5. mocka ProposalIdGenerator pra retornar UUID fixo (deterministico)
+ *  9.6. roda os testes e vê quebrar (ProposalIdGenerator precisa ser open)
+ *  9.7. refatora ProposalIdGenerator pra ser open
+ *  9.8. roda os testes e vê passar
+ * 10. (super opcional) usando API do Mockito
+ *  10.1. Mockito.any() - explica que pode ajudar a identificar problemas do equals e hashCode
+ *  10.2. Mockito.argumentCaptor() - avançado
  */
 @MicronautTest(transactional = false)
 internal class CreateProposalEndpointTest(
@@ -57,13 +117,33 @@ internal class CreateProposalEndpointTest(
     val grpcClient: PropostasGrpcServiceGrpc.PropostasGrpcServiceBlockingStub,
 ) {
 
+    @Inject
+    lateinit var financialClient: FinancialClient
+
+    @Inject
+    lateinit var generator: ProposalIdGenerator
+
+    val PROPOSAL_ID = UUID.randomUUID()
+
     @BeforeEach
     fun setup() {
+        `when`(generator.generate()).thenReturn(PROPOSAL_ID)
         repository.deleteAll()
     }
 
     @Test
-    fun `deve criar nova proposta`() {
+    fun `deve criar nova proposta com status ELEGIVEL`() {
+        // cenario
+        `when`(financialClient.submitForAnalysis(SubmitForAnalysisRequest(
+            document = "63657520325",
+            name = "Rafael Ponte",
+            proposalId = PROPOSAL_ID.toString()
+        )))
+            .thenReturn(SubmitForAnalysisResponse(
+                proposalId = PROPOSAL_ID.toString(),
+                status = "SEM_RESTRICAO"
+            ))
+
         // ação
         val response = grpcClient.create(CreateProposalRequest.newBuilder()
                                                 .setDocument("63657520325")
@@ -78,6 +158,38 @@ internal class CreateProposalEndpointTest(
             assertNotNull(id)
             assertNotNull(createdAt)
             assertTrue(repository.existsById(UUID.fromString(id)))
+            assertEquals(ProposalStatus.ELIBLE, repository.findById(UUID.fromString(id)).get().status)
+        }
+    }
+
+    @Test
+    fun `deve criar nova proposta com status NAO ELEGIVEL`() {
+        // cenario
+        `when`(financialClient.submitForAnalysis(SubmitForAnalysisRequest(
+            document = "63657520325",
+            name = "Rafael Ponte",
+            proposalId = UUID.randomUUID().toString() // TODO: corrigir para os testes
+        )))
+            .thenReturn(SubmitForAnalysisResponse(
+                proposalId = UUID.randomUUID().toString(), // TODO: corrigir para os testes
+                status = "COM_RESTRICAO"
+            ))
+
+        // ação
+        val response = grpcClient.create(CreateProposalRequest.newBuilder()
+            .setDocument("63657520325")
+            .setName("Rafael Ponte")
+            .setEmail("rafael.ponte@zup.com.br")
+            .setAddress("Rua das Rosa, 375")
+            .setSalary(2020.99)
+            .build())
+
+        // validação
+        with(response) {
+            assertNotNull(id)
+            assertNotNull(createdAt)
+            assertTrue(repository.existsById(UUID.fromString(id)))
+            assertEquals(ProposalStatus.NOT_ELIBLE, repository.findById(UUID.fromString(id)).get().status)
         }
     }
 
@@ -89,7 +201,8 @@ internal class CreateProposalEndpointTest(
             email = "rafael.ponte@zup.com.br",
             name = "Rafael Ponte",
             address = "Rua das Rosas, 375",
-            salary = BigDecimal("2020.99")
+            salary = BigDecimal("2020.99"),
+            id = UUID.randomUUID()
         ))
 
         // ação
@@ -132,6 +245,16 @@ internal class CreateProposalEndpointTest(
                 Pair("salary", "must be greater than or equal to 0"),
             ))
         }
+    }
+
+    @MockBean(FinancialClient::class)
+    fun mockFinancialClient(): FinancialClient {
+        return mock(FinancialClient::class.java)
+    }
+
+    @MockBean(ProposalIdGenerator::class)
+    fun mockProposalIdGenerator(): ProposalIdGenerator {
+        return mock(ProposalIdGenerator::class.java)
     }
 
     @Factory

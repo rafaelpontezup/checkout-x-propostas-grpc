@@ -36,13 +36,23 @@ class Proposal(
     @field:PositiveOrZero
     @field:NotNull
     @Column(nullable = false)
-    val salary: BigDecimal
+    val salary: BigDecimal,
+    @Id
+    val id: UUID
 ) {
 
-    @Id
-    @GeneratedValue
-    val id: UUID? = null
+//    @Id
+//    @GeneratedValue
+//    val id: UUID? = null
 
     @Column(nullable = false, updatable = false)
     val createdAt: LocalDateTime = LocalDateTime.now()
+
+    var status: ProposalStatus = ProposalStatus.NOT_ELIBLE
+
+    fun updateStatus(status: ProposalStatus): Proposal {
+        this.status = status
+        return this
+    }
+
 }
