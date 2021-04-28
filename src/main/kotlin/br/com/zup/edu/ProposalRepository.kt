@@ -6,4 +6,6 @@ import java.util.*
 
 @Repository
 interface ProposalRepository : JpaRepository<Proposal, UUID> {
+
+    fun existsByDocument(document: String): Boolean
 }

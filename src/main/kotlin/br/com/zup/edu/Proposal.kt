@@ -16,7 +16,7 @@ import javax.validation.constraints.PositiveOrZero
 class Proposal(
     @CpfOrCnpj
     @field:NotBlank
-    @Column(nullable = false)
+    @Column(nullable = false, unique = true)
     val document: String,
 
     @field:NotBlank
