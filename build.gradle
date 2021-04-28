@@ -41,6 +41,8 @@ dependencies {
 
     implementation("io.micronaut.beanvalidation:micronaut-hibernate-validator")
     implementation("org.hibernate:hibernate-validator:6.1.6.Final")
+
+    testImplementation("org.hamcrest:hamcrest-core:2.2")
 }
 
 

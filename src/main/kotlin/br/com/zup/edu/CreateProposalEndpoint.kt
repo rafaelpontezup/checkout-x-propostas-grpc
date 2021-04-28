@@ -2,10 +2,12 @@ package br.com.zup.edu
 
 import br.com.zup.edu.shared.grpc.ErrorHandler
 import com.google.protobuf.Timestamp
+import io.grpc.Status
 import io.grpc.stub.StreamObserver
 import io.micronaut.transaction.SynchronousTransactionManager
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
+import java.lang.IllegalStateException
 import java.math.BigDecimal
 import java.sql.Connection
 import java.time.LocalDateTime
@@ -27,8 +29,14 @@ class CreateProposalEndpoint(
 
         LOGGER.info("request: $request")
 
+        // extra: exemplificando TDD
+        if (request.document.startsWith("3")) {
+            throw IllegalStateException("esse documento não é suportado pelo nosso sistema")
+        }
+
         // solucoes: 1) controle transacional PROGRAMATICO; 2) ou extrai logica para um service + @Transacional
         val proposal = transactionManager.executeWrite {
+
             if (repository.existsByDocument(request.document)) {
                 throw ProposalAlreadyExistsException("proposal already exists")
             }

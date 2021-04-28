@@ -1,5 +1,6 @@
 package br.com.zup.edu
 
+import br.com.zup.edu.shared.validations.CpfOrCnpj
 import java.math.BigDecimal
 import java.time.LocalDateTime
 import java.util.*
