@@ -43,6 +43,8 @@ dependencies {
     implementation("org.hibernate:hibernate-validator:6.1.6.Final")
 
     testImplementation("org.hamcrest:hamcrest-core:2.2")
+    testImplementation("org.mockito:mockito-core")
+    testImplementation("org.mockito:mockito-junit-jupiter:3.8.0")
 }
 
 

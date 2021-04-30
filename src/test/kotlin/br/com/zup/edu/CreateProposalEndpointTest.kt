@@ -1,7 +1,9 @@
 package br.com.zup.edu
 
+import br.com.zup.edu.integration.FinancialClient
+import br.com.zup.edu.integration.SubmitForAnalysisRequest
+import br.com.zup.edu.integration.SubmitForAnalysisResponse
 import com.google.rpc.BadRequest
-import io.grpc.Channel
 import io.grpc.ManagedChannel
 import io.grpc.Status
 import io.grpc.StatusRuntimeException
@@ -9,30 +11,34 @@ import io.grpc.protobuf.StatusProto
 import io.micronaut.context.annotation.Factory
 import io.micronaut.grpc.annotation.GrpcChannel
 import io.micronaut.grpc.server.GrpcServerChannel
+import io.micronaut.test.annotation.MockBean
 import io.micronaut.test.extensions.junit5.annotation.MicronautTest
-import org.hamcrest.CoreMatchers.hasItems
 import org.hamcrest.MatcherAssert.assertThat
-import org.hamcrest.Matchers
 import org.hamcrest.Matchers.*
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.TestFactory
 import org.junit.jupiter.api.assertThrows
+import org.mockito.Mockito
+import org.mockito.Mockito.`when`
 import java.math.BigDecimal
 import java.util.*
 import javax.inject.Singleton
-import javax.transaction.Transactional
 
 @MicronautTest(transactional = false)
 internal class CreateProposalEndpointTest(
     val repository: ProposalRepository,
     val grpcClient: PropostasGrpcServiceGrpc.PropostasGrpcServiceBlockingStub,
+    val financialClient: FinancialClient,
+    val proposalIdGenerator: ProposalIdGenerator,
 ) {
+
+    val PROPOSA_ID = UUID.randomUUID()
 
     @BeforeEach
     fun setup() {
         repository.deleteAll()
+        `when`(proposalIdGenerator.generate()).thenReturn(PROPOSA_ID)
     }
 
     /**
@@ -61,7 +67,17 @@ internal class CreateProposalEndpointTest(
     }
 
     @Test
-    fun `deve criar uma nova proposta`() {
+    fun `deve criar uma nova proposta com status ELEGIVEL`() {
+
+        // cenário
+        `when`(financialClient.submitForAnalysis(SubmitForAnalysisRequest( // x123
+            document = "63657520325",
+            name = "Rafael Ponte",
+            proposalId = PROPOSA_ID.toString()
+        ))).thenReturn(SubmitForAnalysisResponse(
+            proposalId = PROPOSA_ID.toString(),
+            status = "SEM_RESTRICAO"
+        ))
 
         // ação
         val response = grpcClient.create(CreateProposalRequest.newBuilder()
@@ -77,7 +93,50 @@ internal class CreateProposalEndpointTest(
             assertNotNull(proposalId)
             assertNotNull(createdAt)
             assertTrue(repository.existsById(UUID.fromString(proposalId))) // verifica efeito colateral
+            assertEquals(ProposalStatus.ELIGIBLE, repository.findById(UUID.fromString(proposalId)).get().status)
         }
+    }
+
+    @Test
+    fun `deve criar uma nova proposta com status NAO ELEGIVEL`() {
+        // cenário
+        `when`(financialClient.submitForAnalysis(SubmitForAnalysisRequest(
+            document = "63657520325",
+            name = "Rafael Ponte",
+            proposalId = PROPOSA_ID.toString()
+        ))).thenReturn(SubmitForAnalysisResponse(
+            proposalId = PROPOSA_ID.toString(),
+            status = "COM_RESTRICAO"
+        ))
+
+        // ação
+        val response = grpcClient.create(CreateProposalRequest.newBuilder()
+                                                        .setDocument("63657520325")
+                                                        .setEmail("rafael.ponte@zup.com.br")
+                                                        .setName("Rafael Ponte")
+                                                        .setAddress("Rua das Rosas, 375")
+                                                        .setSalary(30000.99)
+                                                        .build())
+
+        // validação
+        with(response) {
+            assertNotNull(proposalId)
+            assertNotNull(createdAt)
+            assertTrue(repository.existsById(UUID.fromString(proposalId))) // verifica efeito colateral
+            assertEquals(ProposalStatus.NOT_ELIGIBLE, repository.findById(UUID.fromString(proposalId)).get().status)
+        }
+    }
+
+    @MockBean(FinancialClient::class)
+    fun mockFinancialClient(): FinancialClient {
+        val duble = Mockito.mock(FinancialClient::class.java)
+        return duble
+    }
+
+    @MockBean(ProposalIdGenerator::class)
+    fun mockProposalIdGenerator(): ProposalIdGenerator {
+        val duble = Mockito.mock(ProposalIdGenerator::class.java)
+        return duble
     }
 
     @Test
@@ -88,7 +147,8 @@ internal class CreateProposalEndpointTest(
             name = "Yuri Matheus",
             email = "yuri.matheus@zup.com.br",
             address = "Rua dos Endpoints",
-            salary = BigDecimal(1001.12)
+            salary = BigDecimal(1001.12),
+            id = UUID.randomUUID()
         ))
 
         // ação

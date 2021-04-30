@@ -4,10 +4,8 @@ import br.com.zup.edu.shared.validations.CpfOrCnpj
 import java.math.BigDecimal
 import java.time.LocalDateTime
 import java.util.*
-import javax.persistence.Column
-import javax.persistence.Entity
-import javax.persistence.GeneratedValue
-import javax.persistence.Id
+import javax.persistence.*
+import javax.persistence.EnumType.STRING
 import javax.validation.constraints.Email
 import javax.validation.constraints.NotBlank
 import javax.validation.constraints.NotNull
@@ -36,13 +34,27 @@ class Proposal(
     @field:PositiveOrZero
     @field:NotNull
     @Column(nullable = false)
-    val salary: BigDecimal
+    val salary: BigDecimal,
+    @Id
+    val id: UUID,
 ) {
 
-    @Id
-    @GeneratedValue
-    val id: UUID? = null
+
 
     @Column(nullable = false, updatable = false)
     val createdAt: LocalDateTime = LocalDateTime.now()
+
+    @Enumerated(STRING)
+    var status: ProposalStatus = ProposalStatus.NOT_ELIGIBLE
+    private set
+
+    @Column(nullable = true)
+    var updatedAt: LocalDateTime? = null
+
+    fun updateStatus(status: ProposalStatus): Proposal {
+        this.status = status
+        this.updatedAt = LocalDateTime.now()
+        return this
+    }
+
 }
