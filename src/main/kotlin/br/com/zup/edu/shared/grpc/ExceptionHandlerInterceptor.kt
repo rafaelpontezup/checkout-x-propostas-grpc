@@ -31,6 +31,8 @@ class ExceptionHandlerInterceptor : MethodInterceptor<CreateProposalEndpoint, An
             return context.proceed() // processa o metodo interceptado
         } catch (e: Exception) {
 
+            LOGGER.error(e.message)
+
             val error = when(e) {
                 is IllegalArgumentException -> Status.INVALID_ARGUMENT.withDescription(e.message).asRuntimeException()
                 is IllegalStateException -> Status.FAILED_PRECONDITION.withDescription(e.message).asRuntimeException()
