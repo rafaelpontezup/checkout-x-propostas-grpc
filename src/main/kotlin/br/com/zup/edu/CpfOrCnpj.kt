@@ -7,8 +7,9 @@ import org.hibernate.validator.constraints.br.CPF
 import javax.validation.Constraint
 import javax.validation.Payload
 import javax.validation.ReportAsSingleViolation
-import kotlin.annotation.AnnotationRetention.*
-import kotlin.annotation.AnnotationTarget.*
+import kotlin.annotation.AnnotationRetention.RUNTIME
+import kotlin.annotation.AnnotationTarget.FIELD
+import kotlin.annotation.AnnotationTarget.PROPERTY_GETTER
 import kotlin.reflect.KClass
 
 @CPF /*OR*/ @CNPJ
