@@ -72,7 +72,10 @@ class CreateProposalEndpoint(
         return when(response.status) {
             HttpStatus.CREATED -> response.body().toModel()
             HttpStatus.UNPROCESSABLE_ENTITY -> ProposalStatus.NOT_ELIGIBLE
-            else -> throw IllegalStateException("it's impossible to submit proposal for analysis")
+            else -> {
+                LOGGER.error("it's impossible to submit proposal for analysis. Server responded with '${response.status.code} - ${response.status}'")
+                throw IllegalStateException("it's impossible to submit proposal for analysis")
+            }
         }
     }
 
