@@ -3,10 +3,7 @@ package br.com.zup.edu
 import java.math.BigDecimal
 import java.time.LocalDateTime
 import java.util.*
-import javax.persistence.Column
-import javax.persistence.Entity
-import javax.persistence.GeneratedValue
-import javax.persistence.Id
+import javax.persistence.*
 import javax.validation.constraints.Email
 import javax.validation.constraints.NotBlank
 import javax.validation.constraints.NotNull
@@ -38,10 +35,25 @@ class Proposal(
     val salary: BigDecimal,
 ) {
 
+    fun updateStatus(status: ProposalStatus): Proposal {
+        this.status = status
+        this.updatedAt = LocalDateTime.now()
+        return this
+    }
+
     @Id
     @GeneratedValue
     val id: UUID? = null
 
     @Column(nullable = false, updatable = false)
     val createdAt: LocalDateTime = LocalDateTime.now()
+
+    @Enumerated(EnumType.STRING)
+    var status: ProposalStatus = ProposalStatus.NOT_ELIGIBLE
+        private set
+
+    @Column(nullable = false)
+    var updatedAt: LocalDateTime = LocalDateTime.now()
+        private set
+
 }
