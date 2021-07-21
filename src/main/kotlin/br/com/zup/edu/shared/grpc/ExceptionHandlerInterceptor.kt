@@ -26,6 +26,7 @@ class ExceptionHandlerInterceptor : MethodInterceptor<CreateProposalEndpoint, An
             return context.proceed()
         } catch (e: Exception) {
             LOGGER.error(e.message)
+            e.printStackTrace()
 
             /**
              * That's a simple solution and in my opinion it's good enough for a microservice.

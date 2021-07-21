@@ -3,6 +3,8 @@ package br.com.zup.edu.propostas
 import br.com.zup.edu.CreateProposalRequest
 import br.com.zup.edu.CreateProposalResponse
 import br.com.zup.edu.PropostasGrpcServiceGrpc
+import br.com.zup.edu.integration.FinancialClient
+import br.com.zup.edu.integration.SubmitForAnalysisRequest
 import br.com.zup.edu.shared.grpc.ErrorHandler
 import com.google.protobuf.Timestamp
 import io.grpc.stub.StreamObserver
@@ -20,6 +22,7 @@ import javax.transaction.Transactional
 @Singleton
 open class CreateProposalEndpoint(
     @Inject val repository: ProposalRespository,
+    @Inject val financialClient: FinancialClient,
     @Inject val transactionManager: SynchronousTransactionManager<Connection>
     ) : PropostasGrpcServiceGrpc.PropostasGrpcServiceImplBase() {
 
@@ -44,7 +47,11 @@ open class CreateProposalEndpoint(
                 throw ProposalAlreadyExistsException("proposal already exists")
             }
 
-            repository.save(request.toModel())
+            val proposal = repository.save(request.toModel())
+
+            // integra com API financeira
+            val status = submitForAnalysis(proposal)
+            proposal.updateStatus(newStatus = status)
         } // commit
 
         responseObserver.onNext(CreateProposalResponse.newBuilder()
@@ -54,6 +61,19 @@ open class CreateProposalEndpoint(
         responseObserver.onCompleted()
 
         // 1-100ms
+    }
+
+    private fun submitForAnalysis(proposal: Proposal): ProposalStatus {
+
+        val response = financialClient.submitForAnalysis(
+            SubmitForAnalysisRequest(
+                document = proposal.document,
+                name = proposal.name,
+                proposalId = proposal.id.toString()
+            )
+        )
+
+        return response.toModel()
     }
     // comitar tx
 

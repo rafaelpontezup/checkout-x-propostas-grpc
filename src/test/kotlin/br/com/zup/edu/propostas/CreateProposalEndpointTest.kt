@@ -2,6 +2,9 @@ package br.com.zup.edu.propostas
 
 import br.com.zup.edu.CreateProposalRequest
 import br.com.zup.edu.PropostasGrpcServiceGrpc
+import br.com.zup.edu.integration.FinancialClient
+import br.com.zup.edu.integration.SubmitForAnalysisRequest
+import br.com.zup.edu.integration.SubmitForAnalysisResponse
 import com.google.rpc.BadRequest
 import io.grpc.ManagedChannel
 import io.grpc.Status
@@ -11,6 +14,7 @@ import io.micronaut.context.annotation.Bean
 import io.micronaut.context.annotation.Factory
 import io.micronaut.grpc.annotation.GrpcChannel
 import io.micronaut.grpc.server.GrpcServerChannel
+import io.micronaut.test.annotation.MockBean
 import io.micronaut.test.extensions.junit5.annotation.MicronautTest
 import org.hamcrest.MatcherAssert.assertThat
 import org.hamcrest.Matchers.containsInAnyOrder
@@ -18,6 +22,8 @@ import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
+import org.mockito.Mockito
+import org.mockito.Mockito.*
 import java.math.BigDecimal
 import java.util.*
 import javax.inject.Inject
@@ -31,11 +37,20 @@ internal class CreateProposalEndpointTest(
     @Inject val grpcClient: PropostasGrpcServiceGrpc.PropostasGrpcServiceBlockingStub
 ) {
 
+    @Inject
+    lateinit var financialClient: FinancialClient // injeta o objeto mockado por causa do @MockBean
+
     /**
      * 1. happy-path - OK
      * 2. proposta duplicada - OK
      * 3. erros de validação
      */
+
+    @MockBean(FinancialClient::class)
+    fun financialClientMock(): FinancialClient {
+        val mock = mock(FinancialClient::class.java)
+        return mock
+    }
 
     @BeforeEach
     fun setup() {
@@ -43,7 +58,22 @@ internal class CreateProposalEndpointTest(
     }
 
     @Test
-    fun `deve criar nova proposta`() {
+    fun `deve criar nova proposta com status ELEGIVEL`() {
+
+        // cenário
+        val request1 = SubmitForAnalysisRequest(
+            document = "63657520325",
+            name = "Rafael Ponte",
+            proposalId = UUID.randomUUID().toString() // vai gerar um UUID aleatorio
+        )
+
+        val response1 = SubmitForAnalysisResponse(
+            proposalId = UUID.randomUUID().toString(),
+            status = "SEM_RESTRICAO"
+        )
+
+        `when`(financialClient.submitForAnalysis(request1)).thenReturn(response1)
+
         // ação
         val request = CreateProposalRequest.newBuilder()
                                         .setDocument("63657520325")
@@ -60,6 +90,44 @@ internal class CreateProposalEndpointTest(
             assertNotNull(id, "campo id")
             assertNotNull(createdAt, "campo data de criacao")
             assertTrue(repository.existsById(UUID.fromString(id)), "proposta no banco de dados") // validando o efeito colateral
+            assertEquals(ProposalStatus.ELIGIBLE, repository.findById(UUID.fromString(id)).get().status)
+        }
+    }
+
+    @Test
+    fun `deve criar nova proposta com status NAO ELEGIVEL`() {
+
+        // cenário
+        val request1 = SubmitForAnalysisRequest(
+            document = "63657520325",
+            name = "Rafael Ponte",
+            proposalId = UUID.randomUUID().toString()// vai gerar um UUID aleatorio
+        )
+
+        val response1 = SubmitForAnalysisResponse(
+            proposalId = UUID.randomUUID().toString(),
+            status = "COM_RESTRICAO"
+        )
+
+        `when`(financialClient.submitForAnalysis(request1)).thenReturn(response1)
+
+        // ação
+        val request = CreateProposalRequest.newBuilder()
+            .setDocument("63657520325")
+            .setName("Rafael Ponte")
+            .setEmail("rafael.ponte@zup.com.br")
+            .setAddress("Rua das Rosas, 375")
+            .setSalary(30000.99)
+            .build()
+
+        val response = grpcClient.create(request)
+
+        // validação
+        with(response) {
+            assertNotNull(id, "campo id")
+            assertNotNull(createdAt, "campo data de criacao")
+            assertTrue(repository.existsById(UUID.fromString(id)), "proposta no banco de dados") // validando o efeito colateral
+            assertEquals(ProposalStatus.NOT_ELIGIBLE, repository.findById(UUID.fromString(id)).get().status)
         }
     }
 
