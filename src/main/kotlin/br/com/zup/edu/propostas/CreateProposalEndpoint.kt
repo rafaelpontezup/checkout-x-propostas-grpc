@@ -6,8 +6,10 @@ import br.com.zup.edu.PropostasGrpcServiceGrpc
 import br.com.zup.edu.shared.grpc.ErrorHandler
 import com.google.protobuf.Timestamp
 import io.grpc.stub.StreamObserver
+import io.micronaut.transaction.SynchronousTransactionManager
 import org.slf4j.LoggerFactory
 import java.math.BigDecimal
+import java.sql.Connection
 import java.time.LocalDateTime
 import java.time.ZoneId
 import javax.inject.Inject
@@ -16,27 +18,44 @@ import javax.transaction.Transactional
 
 @ErrorHandler
 @Singleton
-open class CreateProposalEndpoint(@Inject val repository: ProposalRespository) : PropostasGrpcServiceGrpc.PropostasGrpcServiceImplBase() {
+open class CreateProposalEndpoint(
+    @Inject val repository: ProposalRespository,
+    @Inject val transactionManager: SynchronousTransactionManager<Connection>
+    ) : PropostasGrpcServiceGrpc.PropostasGrpcServiceImplBase() {
 
     private val LOGGER = LoggerFactory.getLogger(this.javaClass)
 
-    @Transactional
+//    @Transactional // nao use com endpoints gRPC
+    // abrir tx
     open override fun create(request: CreateProposalRequest, responseObserver: StreamObserver<CreateProposalResponse>) {
 
         LOGGER.info("New Request: $request")
 
-        if (repository.existsByDocument(request.document)) {
-            throw ProposalAlreadyExistsException("proposal already exists")
-        }
+        /**
+         * Alternativas a @Transactional no endpoint:
+         *
+         * 1. auto-commit=true -> deixa o repository commitar
+         * 2. usar uma classe de Service + @Transactional
+         * 3. controle transacional programatico
+         */
+        val proposal = transactionManager.executeWrite { // auto-commit=false
 
-        val proposal = repository.save(request.toModel())
+            if (repository.existsByDocument(request.document)) {
+                throw ProposalAlreadyExistsException("proposal already exists")
+            }
+
+            repository.save(request.toModel())
+        } // commit
 
         responseObserver.onNext(CreateProposalResponse.newBuilder()
                                         .setId(proposal.id.toString())
                                         .setCreatedAt(proposal.createdAt.toGrpcTimestamp())
                                         .build())
         responseObserver.onCompleted()
+
+        // 1-100ms
     }
+    // comitar tx
 
 }
 
